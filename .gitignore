@@ -147,3 +147,10 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Vite
+dist/
+dist-ssr/
+.vite/
+*.local
+vite.config.*.timestamp-*
