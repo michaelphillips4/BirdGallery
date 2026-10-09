@@ -4,17 +4,26 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/sync-amplify-outputs.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/sync-amplify-outputs.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync:amplify-outputs": "node scripts/sync-amplify-outputs.mjs",
+    "sandbox": "ampx sandbox"
   },
   "dependencies": {
+    "@aws-amplify/ui-react": "^6.15.7",
+    "aws-amplify": "^6.22.1",
+    "browser-image-compression": "^2.0.2",
     "lucide-react": "^1.54.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@aws-amplify/backend": "^1.25.1",
+    "@aws-amplify/backend-cli": "^1.10.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
@@ -22,5 +31,8 @@
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
+  },
+  "overrides": {
+    "handlebars": "4.7.10"
   }
 }

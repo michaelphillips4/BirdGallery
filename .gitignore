@@ -154,3 +154,7 @@ dist-ssr/
 .vite/
 *.local
 vite.config.*.timestamp-*
+amplify_outputs.json
+amplify_outputs.*.json
+public/amplify_outputs.json
+.amplify/

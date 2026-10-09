@@ -1,4 +1,13 @@
 version: 1
+backend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci --cache .npm --prefer-offline
+    build:
+      commands:
+        - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
+        - npm run sync:amplify-outputs
 frontend:
   phases:
     preBuild:
@@ -13,4 +22,5 @@ frontend:
       - '**/*'
   cache:
     paths:
+      - .npm/**
       - node_modules/**/*

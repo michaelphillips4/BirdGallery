@@ -89,6 +89,7 @@
 .primary-button { display: inline-flex; align-items: center; gap: 8px; margin-top: 19px; padding: 11px 15px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); font-size: 12px; cursor: pointer; transition: color 160ms, background 160ms; }
 .primary-button:hover { background: var(--leaf); color: var(--ink); }
 .collection-count { color: var(--muted); }
+.admin-session { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-bottom: 18px; color: var(--muted); font-size: 11px; }
 .manage-rows { max-height: 585px; overflow: auto; }
 .manage-row { display: grid; grid-template-columns: 58px minmax(0, 1fr) 34px; align-items: center; gap: 11px; min-height: 76px; border-bottom: 1px solid var(--line); }
 .manage-row > img { width: 58px; height: 48px; object-fit: cover; background: var(--paper-deep); }
@@ -98,6 +99,7 @@
 .delete-button { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid transparent; background: transparent; color: #777b73; cursor: pointer; }
 .delete-button:hover { border-color: #d9b7ac; background: #f5e5df; color: var(--clay); }
 .empty-state { padding: 24px 0; color: var(--muted); font-size: 13px; }
+.form-error { margin: 14px 0; padding: 11px 13px; border-left: 2px solid var(--clay); background: #f5e5df; color: #853e2e; font-size: 12px; line-height: 1.5; }
 .gallery-empty { min-height: 180px; }
 @keyframes rise-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
