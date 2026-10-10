@@ -39,6 +39,8 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
   const [draft, setDraft] = useState(blankDraft)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadError, setUploadError] = useState('')
+  const [isSavingPhoto, setIsSavingPhoto] = useState(false)
+  const [saveStatus, setSaveStatus] = useState('')
   const [isLoading, setIsLoading] = useState(backendConfigured)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
@@ -79,15 +81,25 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
     const form = event.currentTarget
     if (!uploadFile || !draft.title.trim() || uploadError) return
     setActionError('')
+    setIsSavingPhoto(true)
+    setSaveStatus('Starting photo upload…')
     try {
       const { createPhoto } = await import('./backend')
-      await createPhoto({ ...draft, title: draft.title.trim() } as PhotoInput, uploadFile)
+      await createPhoto(
+        { ...draft, title: draft.title.trim() } as PhotoInput,
+        uploadFile,
+        setSaveStatus,
+      )
       await reloadPhotos()
       setDraft(blankDraft)
       setUploadFile(null)
       form.reset()
+      setSaveStatus('Photo saved to the collection.')
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'Could not add this photograph.')
+      setSaveStatus('Photo was not saved.')
+    } finally {
+      setIsSavingPhoto(false)
     }
   }
 
@@ -144,7 +156,8 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
                 <label className="form-field form-field-wide"><span>Field note</span><textarea rows={3} value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} placeholder="A short note about the photograph" /></label>
               </div>
               {actionError && <p className="form-error" role="alert">{actionError}</p>}
-              <button className="primary-button" type="submit"><Plus size={17} /> Add to collection</button>
+              {saveStatus && <p className={actionError ? 'form-error' : 'save-status'} role="status">{saveStatus}</p>}
+              <button className="primary-button" type="submit" disabled={isSavingPhoto}><Plus size={17} />{isSavingPhoto ? 'Saving…' : 'Add to collection'}</button>
             </form>
             <section className="manage-list" aria-labelledby="collection-heading">
               <div className="form-heading"><div><span className="section-index">02</span><h2 id="collection-heading">In the collection</h2></div><span className="collection-count">{photos.length} PHOTOS</span></div>

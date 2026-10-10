@@ -49,10 +49,15 @@ export async function listPhotos(): Promise<BirdPhoto[]> {
   )
 }
 
-export async function createPhoto(input: PhotoInput, file: File): Promise<void> {
+export async function createPhoto(
+  input: PhotoInput,
+  file: File,
+  onStatus: (message: string) => void,
+): Promise<void> {
   const validationError = validatePhotoFile(file)
   if (validationError) throw new Error(validationError)
 
+  onStatus('Preparing image and removing embedded metadata…')
   const sanitizedImage = await imageCompression(file, {
     fileType: 'image/webp',
     initialQuality: 0.88,
@@ -60,19 +65,28 @@ export async function createPhoto(input: PhotoInput, file: File): Promise<void> 
     maxWidthOrHeight: 2400,
     preserveExif: false,
     useWebWorker: true,
+    onProgress: (progress) => onStatus(`Preparing image… ${Math.round(progress)}%`),
   })
   if (sanitizedImage.size > 8 * 1024 * 1024) {
     throw new Error('The processed image is still larger than 8 MB.')
   }
 
   const imageKey = `photos/${crypto.randomUUID()}/photo.webp`
+  onStatus('Uploading image to secure storage… 0%')
   await uploadData({
     path: imageKey,
     data: sanitizedImage,
-    options: { contentType: 'image/webp' },
+    options: {
+      contentType: 'image/webp',
+      onProgress: ({ transferredBytes, totalBytes }) => {
+        const progress = totalBytes ? Math.round((transferredBytes / totalBytes) * 100) : 0
+        onStatus(`Uploading image to secure storage… ${progress}%`)
+      },
+    },
   }).result
 
   try {
+    onStatus('Saving photo details…')
     const { errors } = await client.models.Photo.create(
       { ...input, imageKey },
       { authMode: 'userPool' },

@@ -88,6 +88,8 @@
 .form-field-wide { grid-column: 1 / -1; }
 .primary-button { display: inline-flex; align-items: center; gap: 8px; margin-top: 19px; padding: 11px 15px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); font-size: 12px; cursor: pointer; transition: color 160ms, background 160ms; }
 .primary-button:hover { background: var(--leaf); color: var(--ink); }
+.primary-button:disabled { cursor: progress; opacity: .7; }
+.save-status { margin: 14px 0; color: var(--blue); font-size: 12px; line-height: 1.5; }
 .collection-count { color: var(--muted); }
 .admin-session { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-bottom: 18px; color: var(--muted); font-size: 11px; }
 .manage-rows { max-height: 585px; overflow: auto; }
