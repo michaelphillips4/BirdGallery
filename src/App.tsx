@@ -8,7 +8,7 @@ const AdminAuthentication = lazy(() => import('./AdminAuthentication'))
 
 const baseImage = 'https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=1500&q=85'
 const initialPhotos: BirdPhoto[] = [
-  ['parakeet', 'Green parakeet', 'Psittacula sp.', 'Sample location', '04 June 2026', 'Kenley Airodrome', 'A vivid green parakeet perched among the leaves.', 'photo-1552728089-57bdde30beb3'],
+  ['parakeet', 'Green parakeet', 'Psittacula sp.', 'Sample location', '04 June 2026', 'Kenley Aerodrome', 'A vivid green parakeet perched among the leaves.', 'photo-1552728089-57bdde30beb3'],
   ['kingfisher', 'Common kingfisher', 'Alcedo atthis', 'Bough Beech, Surrey', '18 May 2026', 'Bough Beech', 'A flash of electric blue over the slow water, just after first light.', 'photo-1444464666168-49d633b86797'],
   ['macaw', 'Blue-and-yellow macaw', 'Ara ararauna', 'Sample location', '11 June 2025', 'Sevenoaks Nature Reserve', 'A close portrait of a blue-and-yellow macaw.', 'photo-1452570053594-1b985d6ea890'],
   ['macaws', 'Macaw flock', 'Ara ararauna', 'Sample location', '23 February 2026', 'Other', 'A small group of macaws gathered together.', 'photo-1549608276-5786777e6587'],
@@ -23,8 +23,18 @@ const initialPhotos: BirdPhoto[] = [
   imageKey: '',
 }))
 
-const filters = ['All', 'Kenley Airodrome', 'Farthing Downs', 'Warnham Local', 'Bough Beech', 'Sevenoaks Nature Reserve', 'Other']
-const blankDraft = { title: '', species: '', location: '', date: '', camera: '', lens: '', settings: '', category: 'Other', notes: '' }
+const filters = ['All', 'Kenley Aerodrome', 'Farthing Downs', 'Warnham Local', 'Bough Beech', 'Sevenoaks Nature Reserve', 'Other']
+const blankDraft = {
+  title: '',
+  species: '',
+  location: 'Kenley Aerodrome',
+  date: '',
+  camera: 'Canon R6',
+  lens: 'Canon 800mm f11',
+  settings: '1/500 f11 ISO 500',
+  category: 'Kenley Aerodrome',
+  notes: '',
+}
 
 async function fetchPhotoCollection() {
   const { listPhotos } = await import('./backend')
