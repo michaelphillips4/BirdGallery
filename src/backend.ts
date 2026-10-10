@@ -25,12 +25,23 @@ export type PhotoInput = Omit<BirdPhoto, 'id' | 'image' | 'imageKey'>
 const client = generateClient<Schema>()
 
 export async function listPhotos(): Promise<BirdPhoto[]> {
-  const { data, errors } = await client.models.Photo.list({ authMode: 'identityPool' })
-  if (errors?.length) throw new Error(errors.map((error) => error.message).join(', '))
+  const session = await fetchAuthSession()
+  const authMode = session.tokens?.accessToken ? 'userPool' : 'identityPool'
+  const { data, errors } = await client.models.Photo.list({ authMode })
+  if (errors?.length) {
+    throw new Error(`Photo database read failed: ${errors.map((error) => error.message).join(', ')}`)
+  }
 
   return Promise.all(
     data.map(async (photo) => {
-      const { url } = await getUrl({ path: photo.imageKey })
+      let imageUrl: string
+      try {
+        const { url } = await getUrl({ path: photo.imageKey })
+        imageUrl = url.toString()
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        throw new Error(`Photo image read from S3 failed: ${message}`)
+      }
       return {
         id: photo.id,
         title: photo.title,
@@ -43,7 +54,7 @@ export async function listPhotos(): Promise<BirdPhoto[]> {
         category: photo.category,
         notes: photo.notes ?? '',
         imageKey: photo.imageKey,
-        image: url.toString(),
+        image: imageUrl,
       }
     }),
   )
