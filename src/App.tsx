@@ -23,7 +23,7 @@ const initialPhotos: BirdPhoto[] = [
   imageKey: '',
 }))
 
-const filters = ['All', 'Kenley Aerodrome', 'Farthing Downs', 'Warnham Local', 'Bough Beech', 'Sevenoaks Nature Reserve', 'Other']
+const categories = ['All', 'Kenley Aerodrome', 'Farthing Downs', 'Warnham Local', 'Bough Beech', 'Sevenoaks Nature Reserve', 'Other']
 const blankDraft = {
   title: '',
   species: '',
@@ -43,7 +43,7 @@ async function fetchPhotoCollection() {
 
 function App({ backendConfigured }: { backendConfigured: boolean }) {
   const [photos, setPhotos] = useState<BirdPhoto[]>(backendConfigured ? [] : import.meta.env.DEV ? initialPhotos : [])
-  const [activeFilter, setActiveFilter] = useState('All')
+  const [activeCategory, setActiveCategory] = useState('All')
   const [selectedPhoto, setSelectedPhoto] = useState<BirdPhoto | null>(null)
   const [isManaging, setIsManaging] = useState(false)
   const [draft, setDraft] = useState(blankDraft)
@@ -84,7 +84,7 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [])
 
-  const visiblePhotos = activeFilter === 'All' ? photos : photos.filter((photo) => photo.category === activeFilter)
+  const visiblePhotos = activeCategory === 'All' ? photos : photos.filter((photo) => photo.category === activeCategory)
 
   async function addPhoto(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -162,7 +162,7 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
                 <label className="form-field"><span>Camera</span><input value={draft.camera} onChange={(event) => setDraft({ ...draft, camera: event.target.value })} placeholder="Camera body" /></label>
                 <label className="form-field"><span>Lens</span><input value={draft.lens} onChange={(event) => setDraft({ ...draft, lens: event.target.value })} placeholder="Lens and focal length" /></label>
                 <label className="form-field form-field-wide"><span>Exposure settings</span><input value={draft.settings} onChange={(event) => setDraft({ ...draft, settings: event.target.value })} placeholder="1/2000 sec · f/5.6 · ISO 800" /></label>
-                <label className="form-field"><span>Category</span><select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>{filters.slice(1).map((filter) => <option key={filter}>{filter}</option>)}</select></label>
+                <label className="form-field"><span>Category</span><select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>{categories.slice(1).map((category) => <option key={category}>{category}</option>)}</select></label>
                 <label className="form-field form-field-wide"><span>Field note</span><textarea rows={3} value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} placeholder="A short note about the photograph" /></label>
               </div>
               {actionError && <p className="form-error" role="alert">{actionError}</p>}
@@ -181,7 +181,7 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
           <section className="intro"><div className="intro-copy"><p className="eyebrow"><span>NOTES FROM THE FIELD</span><span className="eyebrow-line" /></p><h1>Birds, <em>observed.</em></h1><p className="intro-description">A photographic field journal of the birds and wild places of Surrey.</p></div><div className="intro-aside"><span className="aside-number">{String(photos.length).padStart(2, '0')}</span><span>PHOTOGRAPHS<br />IN THE ARCHIVE</span><span className="aside-rule" /><span>SURREY<br />& BEYOND</span></div></section>
           <section className="collection" aria-label="Bird photograph collection">
             {!backendConfigured && <div className="demo-notice"><p>Sample gallery. Connect the Amplify backend to load and manage your own photographs.</p></div>}
-            <div className="collection-toolbar"><div className="filter-list" aria-label="Filter by location">{filters.map((filter) => <button className={activeFilter === filter ? 'filter-button is-selected' : 'filter-button'} type="button" key={filter} onClick={() => setActiveFilter(filter)} aria-pressed={activeFilter === filter}>{filter === 'All' ? 'All photographs' : filter}</button>)}</div><span className="sort-note">LATEST OBSERVATIONS <ArrowUpRight size={14} /></span></div>
+            <div className="collection-toolbar"><div className="filter-list" aria-label="Filter by category">{categories.map((category) => <button className={activeCategory === category ? 'filter-button is-selected' : 'filter-button'} type="button" key={category} onClick={() => setActiveCategory(category)} aria-pressed={activeCategory === category}>{category === 'All' ? 'All photographs' : category}</button>)}</div><span className="sort-note">LATEST OBSERVATIONS <ArrowUpRight size={14} /></span></div>
             {loadError && <p className="form-error" role="alert">{loadError}</p>}
             {isLoading && <p className="empty-state">Loading photographs…</p>}
             {!isLoading && visiblePhotos.length > 0 && (
@@ -194,12 +194,12 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
                 ))}
               </div>
             )}
-            {!isLoading && !loadError && visiblePhotos.length === 0 && <p className="empty-state gallery-empty">No photographs in this location yet.</p>}
+            {!isLoading && !loadError && visiblePhotos.length === 0 && <p className="empty-state gallery-empty">No photographs in this category yet.</p>}
           </section>
         </main>
       )}
 
-      <footer className="site-footer"><span><Bird size={15} /> BIRD INDEX</span><span>A FIELD ARCHIVE · SURREY</span><span>© 2026</span></footer>
+      <footer className="site-footer"><span><Bird size={15} /> BIRD INDEX</span><span>A FIELD ARCHIVE · SURREY</span><a className="footer-link" href="https://www.area2.co.uk" target="_blank" rel="noreferrer">AREA2.CO.UK <ArrowUpRight size={12} /></a><span>© 2026</span></footer>
       {selectedPhoto && <div className="detail-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedPhoto(null) }}><section className="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detail-title"><button className="dialog-close" type="button" onClick={() => setSelectedPhoto(null)} aria-label="Close photo details"><X size={19} /></button><div className="detail-image"><img src={selectedPhoto.image} alt={selectedPhoto.title} /></div><div className="detail-copy"><p className="eyebrow"><span>{selectedPhoto.category.toUpperCase()} OBSERVATION</span><span className="eyebrow-line" /></p><h2 id="detail-title">{selectedPhoto.title}</h2><p className="detail-species">{selectedPhoto.species}</p><p className="detail-notes">{selectedPhoto.notes || 'No field note has been added.'}</p><div className="detail-facts"><div><MapPin size={16} /><span><small>LOCATION</small>{selectedPhoto.location || 'Not recorded'}</span></div><div><CalendarDays size={16} /><span><small>DATE</small>{selectedPhoto.date || 'Not recorded'}</span></div><div><Camera size={16} /><span><small>CAMERA</small>{selectedPhoto.camera || 'Not recorded'}</span></div><div><Aperture size={16} /><span><small>LENS</small>{selectedPhoto.lens || 'Not recorded'}</span></div></div><div className="settings-strip"><span>EXPOSURE</span><strong>{selectedPhoto.settings || 'Not recorded'}</strong></div><span className="record-id">FIELD RECORD / {selectedPhoto.id.toUpperCase()}</span></div></section></div>}
     </div>
   )

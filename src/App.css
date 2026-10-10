@@ -42,6 +42,8 @@
 .site-footer { display: flex; align-items: center; justify-content: space-between; min-height: 58px; border-top: 1px solid var(--line); color: #777b73; }
 .site-footer span:first-child { display: flex; align-items: center; gap: 7px; color: var(--ink); font-weight: 500; }
 .site-footer svg { color: var(--clay); }
+.site-footer .footer-link { display: inline-flex; align-items: center; gap: 4px; color: inherit; text-decoration: none; }
+.site-footer .footer-link:hover { color: var(--blue); text-decoration: underline; }
 .detail-backdrop { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 26px; background: rgba(20, 29, 24, .72); animation: fade-in 160ms both; }
 .detail-dialog { position: relative; display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr); width: min(100%, 1040px); max-height: min(760px, 90vh); overflow: auto; background: var(--paper); animation: rise-in 220ms both; }
 .dialog-close { position: absolute; z-index: 1; top: 14px; right: 14px; display: grid; width: 37px; height: 37px; place-items: center; border: 1px solid rgba(255,255,255,.65); background: rgba(243,242,236,.92); cursor: pointer; }

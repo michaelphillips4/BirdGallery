@@ -46,7 +46,7 @@ export async function listPhotos(): Promise<BirdPhoto[]> {
         id: photo.id,
         title: photo.title,
         species: photo.species ?? '',
-        location: photo.location ?? '',
+        location: photo.location?.trim() || photo.category,
         date: photo.date ?? '',
         camera: photo.camera ?? '',
         lens: photo.lens ?? '',
@@ -99,7 +99,7 @@ export async function createPhoto(
   try {
     onStatus('Saving photo details…')
     const { errors } = await client.models.Photo.create(
-      { ...input, imageKey },
+      { ...input, location: input.location.trim() || input.category, imageKey },
       { authMode: 'userPool' },
     )
     if (errors?.length) throw new Error(errors.map((error) => error.message).join(', '))
