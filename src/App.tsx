@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type FormEvent, type CSSProperties } from 'react'
-import { ArrowLeft, ArrowUpRight, Aperture, Bird, CalendarDays, Camera, ImagePlus, MapPin, PencilLine, Plus, Trash2, X } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Aperture, Bird, CalendarDays, Camera, ImagePlus, MapPin, PencilLine, Plus, Trash2 } from 'lucide-react'
 import type { BirdPhoto, PhotoInput } from './backend'
 import { validatePhotoFile } from './photoValidation'
 import './App.css'
@@ -84,6 +84,10 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [])
+
+  useEffect(() => {
+    if (selectedPhoto) window.scrollTo(0, 0)
+  }, [selectedPhoto])
 
   const visiblePhotos = activeCategory === 'All' ? photos : photos.filter((photo) => photo.category === activeCategory)
 
@@ -216,12 +220,20 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
           </div>
           </AdminAuthentication></Suspense> : <div className="demo-notice"><p>Connect an Amplify backend before signing in. Run <code>npm run sandbox</code> locally, or deploy this branch through Amplify Hosting.</p></div>}
         </main>
+      ) : selectedPhoto ? (
+        <main className="detail-page">
+          <button className="detail-back-button" type="button" onClick={() => setSelectedPhoto(null)}><ArrowLeft size={16} />Back to gallery</button>
+          <section className="detail-layout" aria-labelledby="detail-title">
+            <div className="detail-image"><img src={selectedPhoto.image} alt={selectedPhoto.title} /></div>
+            <div className="detail-copy"><p className="eyebrow"><span>{selectedPhoto.category.toUpperCase()} OBSERVATION</span><span className="eyebrow-line" /></p><h2 id="detail-title">{selectedPhoto.title}</h2><p className="detail-species">{selectedPhoto.species}</p><p className="detail-notes">{selectedPhoto.notes || 'No field note has been added.'}</p><div className="detail-facts"><div><MapPin size={16} /><span><small>LOCATION</small>{selectedPhoto.location || 'Not recorded'}</span></div><div><CalendarDays size={16} /><span><small>DATE</small>{selectedPhoto.date || 'Not recorded'}</span></div><div><Camera size={16} /><span><small>CAMERA</small>{selectedPhoto.camera || 'Not recorded'}</span></div><div><Aperture size={16} /><span><small>LENS</small>{selectedPhoto.lens || 'Not recorded'}</span></div></div><div className="settings-strip"><span>EXPOSURE</span><strong>{selectedPhoto.settings || 'Not recorded'}</strong></div><span className="record-id">FIELD RECORD / {selectedPhoto.id.toUpperCase()}</span></div>
+          </section>
+        </main>
       ) : (
         <main>
           <section className="intro"><div className="intro-copy"><p className="eyebrow"><span>NOTES FROM THE FIELD</span><span className="eyebrow-line" /></p><h1>Birds, <em>observed.</em></h1><p className="intro-description">A photographic field journal of the birds and wild places of Surrey and beyond.</p></div><div className="intro-aside"><span className="aside-number">{String(photos.length).padStart(2, '0')}</span><span>PHOTOGRAPHS<br />IN THE ARCHIVE</span><span className="aside-rule" /><span>SURREY<br />& BEYOND</span></div></section>
           <section className="collection" aria-label="Bird photograph collection">
             {!backendConfigured && <div className="demo-notice"><p>Sample gallery. Connect the Amplify backend to load and manage your own photographs.</p></div>}
-            <div className="collection-toolbar"><div className="filter-list" aria-label="Filter by category">{categories.map((category) => <button className={activeCategory === category ? 'filter-button is-selected' : 'filter-button'} type="button" key={category} onClick={() => setActiveCategory(category)} aria-pressed={activeCategory === category}>{category === 'All' ? 'All photographs' : category}</button>)}</div><span className="sort-note">RECENTLY ADDED <ArrowUpRight size={14} /></span></div>
+            <div className="collection-toolbar"><div className="filter-list" aria-label="Filter by category">{categories.map((category) => <button className={activeCategory === category ? 'filter-button is-selected' : 'filter-button'} type="button" key={category} onClick={() => setActiveCategory(category)} aria-pressed={activeCategory === category}>{category === 'All' ? 'All photographs' : category}</button>)}</div></div>
             {loadError && <p className="form-error" role="alert">{loadError}</p>}
             {isLoading && <p className="empty-state">Loading photographs…</p>}
             {!isLoading && visiblePhotos.length > 0 && (
@@ -229,7 +241,7 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
                 {visiblePhotos.map((photo, index) => (
                   <button className="photo-card" type="button" key={photo.id} onClick={() => setSelectedPhoto(photo)} style={{ '--reveal-delay': `${index * 45}ms` } as CSSProperties} aria-label={`View ${photo.title} details`}>
                     <span className="photo-image-wrap"><img className="photo-image" src={photo.image} alt={photo.title} loading={index > 3 ? 'lazy' : 'eager'} /><span className="photo-open"><ArrowUpRight size={17} /></span></span>
-                    <span className="photo-caption"><span className="photo-caption-top"><span className="photo-category">{photo.category}</span><span className="photo-date">{photo.date}</span></span><span className="photo-title">{photo.title}</span><span className="photo-location"><MapPin size={13} />{photo.location || 'Location not set'}</span></span>
+                    <span className="photo-caption"><span className="photo-caption-top"><span className="photo-date">{photo.date}</span></span><span className="photo-location"><MapPin size={13} />{photo.location || 'Location not set'}</span><span className="photo-title">{photo.title}</span></span>
                   </button>
                 ))}
               </div>
@@ -240,7 +252,6 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
       )}
 
       <footer className="site-footer"><span><Bird size={15} /> BIRD INDEX</span><span>A FIELD ARCHIVE · SURREY</span><a className="footer-link" href="https://www.area2.co.uk" target="_blank" rel="noreferrer">AREA2.CO.UK <ArrowUpRight size={12} /></a><span>© 2026</span></footer>
-      {selectedPhoto && <div className="detail-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedPhoto(null) }}><section className="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detail-title"><button className="dialog-close" type="button" onClick={() => setSelectedPhoto(null)} aria-label="Close photo details"><X size={19} /></button><div className="detail-image"><img src={selectedPhoto.image} alt={selectedPhoto.title} /></div><div className="detail-copy"><p className="eyebrow"><span>{selectedPhoto.category.toUpperCase()} OBSERVATION</span><span className="eyebrow-line" /></p><h2 id="detail-title">{selectedPhoto.title}</h2><p className="detail-species">{selectedPhoto.species}</p><p className="detail-notes">{selectedPhoto.notes || 'No field note has been added.'}</p><div className="detail-facts"><div><MapPin size={16} /><span><small>LOCATION</small>{selectedPhoto.location || 'Not recorded'}</span></div><div><CalendarDays size={16} /><span><small>DATE</small>{selectedPhoto.date || 'Not recorded'}</span></div><div><Camera size={16} /><span><small>CAMERA</small>{selectedPhoto.camera || 'Not recorded'}</span></div><div><Aperture size={16} /><span><small>LENS</small>{selectedPhoto.lens || 'Not recorded'}</span></div></div><div className="settings-strip"><span>EXPOSURE</span><strong>{selectedPhoto.settings || 'Not recorded'}</strong></div><span className="record-id">FIELD RECORD / {selectedPhoto.id.toUpperCase()}</span></div></section></div>}
     </div>
   )
 }
