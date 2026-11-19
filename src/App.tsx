@@ -54,6 +54,7 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
   const [isLoading, setIsLoading] = useState(backendConfigured)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
+  const [editingPhoto, setEditingPhoto] = useState<BirdPhoto | null>(null)
 
   async function reloadPhotos() {
     if (!backendConfigured) return
@@ -86,31 +87,70 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
 
   const visiblePhotos = activeCategory === 'All' ? photos : photos.filter((photo) => photo.category === activeCategory)
 
-  async function addPhoto(event: FormEvent<HTMLFormElement>) {
+  async function savePhoto(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = event.currentTarget
-    if (!uploadFile || !draft.title.trim() || uploadError) return
+    if ((!editingPhoto && !uploadFile) || !draft.title.trim() || uploadError) return
     setActionError('')
     setIsSavingPhoto(true)
-    setSaveStatus('Starting photo upload…')
+    setSaveStatus(editingPhoto ? 'Starting photo update…' : 'Starting photo upload…')
     try {
-      const { createPhoto } = await import('./backend')
-      await createPhoto(
-        { ...draft, title: draft.title.trim() } as PhotoInput,
-        uploadFile,
-        setSaveStatus,
-      )
+      if (editingPhoto) {
+        const { updatePhoto } = await import('./backend')
+        await updatePhoto(
+          editingPhoto,
+          { ...draft, title: draft.title.trim() } as PhotoInput,
+          uploadFile,
+          setSaveStatus,
+        )
+      } else {
+        const { createPhoto } = await import('./backend')
+        await createPhoto(
+          { ...draft, title: draft.title.trim() } as PhotoInput,
+          uploadFile as File,
+          setSaveStatus,
+        )
+      }
       await reloadPhotos()
       setDraft(blankDraft)
       setUploadFile(null)
+      setEditingPhoto(null)
       form.reset()
-      setSaveStatus('Photo saved to the collection.')
+      setSaveStatus(editingPhoto ? 'Photo updated in the collection.' : 'Photo saved to the collection.')
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Could not add this photograph.')
+      setActionError(error instanceof Error ? error.message : 'Could not save this photograph.')
       setSaveStatus('Photo was not saved.')
     } finally {
       setIsSavingPhoto(false)
     }
+  }
+
+  function startEditing(photo: BirdPhoto) {
+    setEditingPhoto(photo)
+    setDraft({
+      title: photo.title,
+      species: photo.species,
+      location: photo.location,
+      date: photo.date,
+      camera: photo.camera,
+      lens: photo.lens,
+      settings: photo.settings,
+      category: photo.category,
+      notes: photo.notes,
+    })
+    setUploadFile(null)
+    setUploadError('')
+    setActionError('')
+    setSaveStatus('')
+  }
+
+  function cancelEditing() {
+    setEditingPhoto(null)
+    setDraft(blankDraft)
+    setUploadFile(null)
+    setUploadError('')
+    setActionError('')
+    setSaveStatus('')
   }
 
   function handleUploadSelection(file: File | undefined) {
@@ -142,17 +182,17 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
       <header className="site-header">
         <button className="wordmark" type="button" onClick={() => { setIsManaging(false); setSelectedPhoto(null) }} aria-label="Bird Index home"><span className="wordmark-icon"><Bird size={19} /></span><span>BIRD<span className="wordmark-light">INDEX</span></span></button>
         <div className="header-meta"><span className="status-dot" /> {backendConfigured ? 'LIVE COLLECTION' : 'SAMPLE COLLECTION'} <span className="meta-divider">/</span> {backendConfigured ? 'SURREY' : 'DEMO PHOTOS'}</div>
-        <button className={`manage-button${isManaging ? ' is-active' : ''}`} type="button" onClick={() => { setIsManaging(!isManaging); setSelectedPhoto(null); setActionError('') }}>{isManaging ? <ArrowLeft size={16} /> : <PencilLine size={15} />}{isManaging ? 'Back to gallery' : 'Manage collection'}</button>
+        <button className={`manage-button${isManaging ? ' is-active' : ''}`} type="button" onClick={() => { setIsManaging(!isManaging); setSelectedPhoto(null); setActionError(''); if (isManaging) cancelEditing() }}>{isManaging ? <ArrowLeft size={16} /> : <PencilLine size={15} />}{isManaging ? 'Back to gallery' : 'Manage collection'}</button>
       </header>
 
       {isManaging ? (
         <main className="manage-page">
           {backendConfigured ? <Suspense fallback={<p className="empty-state">Loading secure admin sign-in…</p>}><AdminAuthentication>
-          <div className="manage-heading"><p className="eyebrow"><span>COLLECTION TOOLS</span><span className="eyebrow-line" /></p><h1>Manage the <em>archive.</em></h1><p className="manage-intro">Add new photographs or remove an entry from the collection.</p></div>
+          <div className="manage-heading"><p className="eyebrow"><span>COLLECTION TOOLS</span><span className="eyebrow-line" /></p><h1>Manage the <em>archive.</em></h1><p className="manage-intro">Add, edit, or remove entries from the collection.</p></div>
           <div className="manage-layout">
-            <form className="upload-form" onSubmit={addPhoto}>
-              <div className="form-heading"><div><span className="section-index">01</span><h2>Add a photograph</h2></div><ImagePlus size={19} /></div>
-              <label className="upload-picker"><input type="file" accept="image/jpeg,image/png,image/webp" required onChange={(event) => handleUploadSelection(event.currentTarget.files?.[0])} /><ImagePlus size={20} /><span>{uploadFile ? uploadFile.name : 'Choose a photo from your device'}</span><span className="picker-browse">Browse</span></label>
+            <form className="upload-form" onSubmit={savePhoto}>
+              <div className="form-heading"><div><span className="section-index">01</span><h2>{editingPhoto ? 'Edit photograph' : 'Add a photograph'}</h2></div>{editingPhoto ? <PencilLine size={19} /> : <ImagePlus size={19} />}</div>
+              <label className="upload-picker"><input type="file" accept="image/jpeg,image/png,image/webp" required={!editingPhoto} onChange={(event) => handleUploadSelection(event.currentTarget.files?.[0])} /><ImagePlus size={20} /><span>{uploadFile ? uploadFile.name : editingPhoto ? 'Keep the current photo, or choose a replacement' : 'Choose a photo from your device'}</span><span className="picker-browse">Browse</span></label>
               {uploadError && <p className="form-error" role="alert">{uploadError}</p>}
               <div className="form-grid">
                 <label className="form-field"><span>Common name *</span><input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="e.g. Common kingfisher" /></label>
@@ -167,11 +207,11 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
               </div>
               {actionError && <p className="form-error" role="alert">{actionError}</p>}
               {saveStatus && <p className={actionError ? 'form-error' : 'save-status'} role="status">{saveStatus}</p>}
-              <button className="primary-button" type="submit" disabled={isSavingPhoto}><Plus size={17} />{isSavingPhoto ? 'Saving…' : 'Add to collection'}</button>
+              <div className="form-actions"><button className="primary-button" type="submit" disabled={isSavingPhoto}>{editingPhoto ? <PencilLine size={17} /> : <Plus size={17} />}{isSavingPhoto ? 'Saving…' : editingPhoto ? 'Save changes' : 'Add to collection'}</button>{editingPhoto && <button className="cancel-button" type="button" onClick={cancelEditing} disabled={isSavingPhoto}>Cancel</button>}</div>
             </form>
             <section className="manage-list" aria-labelledby="collection-heading">
               <div className="form-heading"><div><span className="section-index">02</span><h2 id="collection-heading">In the collection</h2></div><span className="collection-count">{photos.length} PHOTOS</span></div>
-              <div className="manage-rows">{photos.map((photo) => <article className="manage-row" key={photo.id}><img src={photo.image} alt="" /><div className="manage-row-copy"><strong>{photo.title}</strong><span>{photo.location || 'Location not set'}</span></div><button className="delete-button" type="button" onClick={() => void removePhoto(photo)} aria-label={`Delete ${photo.title}`} title="Delete photo"><Trash2 size={16} /></button></article>)}{photos.length === 0 && <p className="empty-state">Your collection is empty. Add a photograph to get started.</p>}</div>
+              <div className="manage-rows">{photos.map((photo) => <article className={editingPhoto?.id === photo.id ? 'manage-row is-editing' : 'manage-row'} key={photo.id}><img src={photo.image} alt="" /><div className="manage-row-copy"><strong>{photo.title}</strong><span>{photo.location || 'Location not set'}</span></div><div className="manage-row-actions"><button className="edit-button" type="button" onClick={() => startEditing(photo)} aria-label={`Edit ${photo.title}`} title="Edit photo"><PencilLine size={16} /></button><button className="delete-button" type="button" onClick={() => void removePhoto(photo)} aria-label={`Delete ${photo.title}`} title="Delete photo"><Trash2 size={16} /></button></div></article>)}{photos.length === 0 && <p className="empty-state">Your collection is empty. Add a photograph to get started.</p>}</div>
             </section>
           </div>
           </AdminAuthentication></Suspense> : <div className="demo-notice"><p>Connect an Amplify backend before signing in. Run <code>npm run sandbox</code> locally, or deploy this branch through Amplify Hosting.</p></div>}

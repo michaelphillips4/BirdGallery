@@ -109,6 +109,69 @@ export async function createPhoto(
   }
 }
 
+export async function updatePhoto(
+  photo: BirdPhoto,
+  input: PhotoInput,
+  file: File | null,
+  onStatus: (message: string) => void,
+): Promise<void> {
+  let newImageKey = photo.imageKey
+
+  if (file) {
+    const validationError = validatePhotoFile(file)
+    if (validationError) throw new Error(validationError)
+
+    onStatus('Preparing image and removing embedded metadata…')
+    const sanitizedImage = await imageCompression(file, {
+      fileType: 'image/webp',
+      initialQuality: 0.88,
+      maxSizeMB: 8,
+      maxWidthOrHeight: 2400,
+      preserveExif: false,
+      useWebWorker: true,
+      onProgress: (progress) => onStatus(`Preparing image… ${Math.round(progress)}%`),
+    })
+    if (sanitizedImage.size > 8 * 1024 * 1024) {
+      throw new Error('The processed image is still larger than 8 MB.')
+    }
+
+    newImageKey = `photos/${crypto.randomUUID()}/photo.webp`
+    onStatus('Uploading image to secure storage… 0%')
+    await uploadData({
+      path: newImageKey,
+      data: sanitizedImage,
+      options: {
+        contentType: 'image/webp',
+        onProgress: ({ transferredBytes, totalBytes }) => {
+          const progress = totalBytes ? Math.round((transferredBytes / totalBytes) * 100) : 0
+          onStatus(`Uploading image to secure storage… ${progress}%`)
+        },
+      },
+    }).result
+  }
+
+  try {
+    onStatus('Saving photo details…')
+    const { errors } = await client.models.Photo.update(
+      {
+        id: photo.id,
+        ...input,
+        location: input.location.trim() || input.category,
+        imageKey: newImageKey,
+      },
+      { authMode: 'userPool' },
+    )
+    if (errors?.length) throw new Error(errors.map((error) => error.message).join(', '))
+  } catch (error) {
+    if (newImageKey !== photo.imageKey) await remove({ path: newImageKey }).catch(() => undefined)
+    throw error
+  }
+
+  if (newImageKey !== photo.imageKey) {
+    await remove({ path: photo.imageKey }).catch(() => undefined)
+  }
+}
+
 export async function deletePhoto(photo: BirdPhoto): Promise<void> {
   await remove({ path: photo.imageKey })
   const { errors } = await client.models.Photo.delete(
