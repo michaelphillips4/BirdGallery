@@ -32,8 +32,9 @@ export async function listPhotos(): Promise<BirdPhoto[]> {
     throw new Error(`Photo database read failed: ${errors.map((error) => error.message).join(', ')}`)
   }
 
+  const latestFirst = [...data].sort((first, second) => second.createdAt.localeCompare(first.createdAt))
   return Promise.all(
-    data.map(async (photo) => {
+    latestFirst.map(async (photo) => {
       let imageUrl: string
       try {
         const { url } = await getUrl({ path: photo.imageKey })
