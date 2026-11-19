@@ -134,7 +134,8 @@
   .aside-rule { grid-column: 1; margin: 3px 0; }
   .photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 23px 13px; }
   .photo-image-wrap { aspect-ratio: .94; }
-  .photo-title { display: block; width: 100%; min-height: 3.75em; font-size: 19px; }
+  .photo-location { min-height: 2.5em; }
+  .photo-title { display: block; width: 100%; min-height: 2.5em; font-size: 19px; }
   .photo-date { font-size: 9px; }
   .collection-toolbar { align-items: flex-start; flex-direction: column; padding: 8px 0; gap: 5px; }
   .filter-list { flex-wrap: wrap; }

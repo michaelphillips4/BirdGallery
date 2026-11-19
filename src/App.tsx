@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type FormEvent, type CSSProperties } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type CSSProperties } from 'react'
 import { ArrowLeft, ArrowUpRight, Aperture, Bird, CalendarDays, Camera, ImagePlus, MapPin, PencilLine, Plus, Trash2 } from 'lucide-react'
 import type { BirdPhoto, PhotoInput } from './backend'
 import { validatePhotoFile } from './photoValidation'
@@ -49,12 +49,16 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
   const [draft, setDraft] = useState(blankDraft)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadError, setUploadError] = useState('')
+  const [metadataError, setMetadataError] = useState('')
+  const [metadataStatus, setMetadataStatus] = useState('')
+  const [isReadingMetadata, setIsReadingMetadata] = useState(false)
   const [isSavingPhoto, setIsSavingPhoto] = useState(false)
   const [saveStatus, setSaveStatus] = useState('')
   const [isLoading, setIsLoading] = useState(backendConfigured)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
   const [editingPhoto, setEditingPhoto] = useState<BirdPhoto | null>(null)
+  const metadataRequestId = useRef(0)
 
   async function reloadPhotos() {
     if (!backendConfigured) return
@@ -94,7 +98,7 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
   async function savePhoto(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = event.currentTarget
-    if ((!editingPhoto && !uploadFile) || !draft.title.trim() || uploadError) return
+    if (isReadingMetadata || (!editingPhoto && !uploadFile) || !draft.title.trim() || uploadError) return
     setActionError('')
     setIsSavingPhoto(true)
     setSaveStatus(editingPhoto ? 'Starting photo update…' : 'Starting photo upload…')
@@ -119,6 +123,9 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
       setDraft(blankDraft)
       setUploadFile(null)
       setEditingPhoto(null)
+      metadataRequestId.current += 1
+      setMetadataError('')
+      setMetadataStatus('')
       form.reset()
       setSaveStatus(editingPhoto ? 'Photo updated in the collection.' : 'Photo saved to the collection.')
     } catch (error) {
@@ -130,6 +137,7 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
   }
 
   function startEditing(photo: BirdPhoto) {
+    metadataRequestId.current += 1
     setEditingPhoto(photo)
     setDraft({
       title: photo.title,
@@ -144,22 +152,33 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
     })
     setUploadFile(null)
     setUploadError('')
+    setMetadataError('')
+    setMetadataStatus('')
+    setIsReadingMetadata(false)
     setActionError('')
     setSaveStatus('')
   }
 
   function cancelEditing() {
+    metadataRequestId.current += 1
     setEditingPhoto(null)
     setDraft(blankDraft)
     setUploadFile(null)
     setUploadError('')
+    setMetadataError('')
+    setMetadataStatus('')
+    setIsReadingMetadata(false)
     setActionError('')
     setSaveStatus('')
   }
 
-  function handleUploadSelection(file: File | undefined) {
+  async function handleUploadSelection(file: File | undefined) {
+    const requestId = ++metadataRequestId.current
     setUploadFile(null)
     setUploadError('')
+    setMetadataError('')
+    setMetadataStatus('')
+    setIsReadingMetadata(false)
     if (!file) return
     const validationError = validatePhotoFile(file)
     if (validationError) {
@@ -167,6 +186,32 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
       return
     }
     setUploadFile(file)
+    setMetadataStatus('Reading photo details…')
+    setIsReadingMetadata(true)
+    try {
+      const { readPhotoMetadata } = await import('./photoMetadata')
+      const metadata = await readPhotoMetadata(file)
+      if (requestId !== metadataRequestId.current) return
+
+      const populatedFields = [
+        metadata.camera && 'camera',
+        metadata.lens && 'lens',
+        metadata.settings && 'exposure settings',
+        metadata.location && 'GPS location',
+      ].filter((field): field is string => Boolean(field))
+      setDraft((currentDraft) => ({ ...currentDraft, ...metadata }))
+      setMetadataStatus(populatedFields.length
+        ? `Filled ${populatedFields.join(', ')} from the photo metadata.`
+        : 'No camera, lens, exposure, or GPS metadata found. Enter details manually.')
+    } catch (error) {
+      if (requestId !== metadataRequestId.current) return
+      setMetadataStatus('')
+      setMetadataError(error instanceof Error
+        ? `Could not read photo metadata: ${error.message}`
+        : 'Could not read photo metadata.')
+    } finally {
+      if (requestId === metadataRequestId.current) setIsReadingMetadata(false)
+    }
   }
 
   async function removePhoto(photo: BirdPhoto) {
@@ -196,12 +241,14 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
           <div className="manage-layout">
             <form className="upload-form" onSubmit={savePhoto}>
               <div className="form-heading"><div><span className="section-index">01</span><h2>{editingPhoto ? 'Edit photograph' : 'Add a photograph'}</h2></div>{editingPhoto ? <PencilLine size={19} /> : <ImagePlus size={19} />}</div>
-              <label className="upload-picker"><input type="file" accept="image/jpeg,image/png,image/webp" required={!editingPhoto} onChange={(event) => handleUploadSelection(event.currentTarget.files?.[0])} /><ImagePlus size={20} /><span>{uploadFile ? uploadFile.name : editingPhoto ? 'Keep the current photo, or choose a replacement' : 'Choose a photo from your device'}</span><span className="picker-browse">Browse</span></label>
+              <label className="upload-picker"><input type="file" accept="image/jpeg,image/png,image/webp" required={!editingPhoto} onChange={(event) => { void handleUploadSelection(event.currentTarget.files?.[0]) }} /><ImagePlus size={20} /><span>{uploadFile ? uploadFile.name : editingPhoto ? 'Keep the current photo, or choose a replacement' : 'Choose a photo from your device'}</span><span className="picker-browse">Browse</span></label>
               {uploadError && <p className="form-error" role="alert">{uploadError}</p>}
+              {metadataError && <p className="form-error" role="alert">{metadataError}</p>}
+              {metadataStatus && <p className="save-status" role="status">{metadataStatus}</p>}
               <div className="form-grid">
                 <label className="form-field"><span>Common name *</span><input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="e.g. Common kingfisher" /></label>
                 <label className="form-field"><span>Scientific name</span><input value={draft.species} onChange={(event) => setDraft({ ...draft, species: event.target.value })} placeholder="e.g. Alcedo atthis" /></label>
-                <label className="form-field"><span>Location</span><input value={draft.location} onChange={(event) => setDraft({ ...draft, location: event.target.value })} placeholder="Place, region" /></label>
+                <label className="form-field"><span>Location</span><input value={draft.location} onChange={(event) => setDraft({ ...draft, location: event.target.value })} placeholder="Place, region, or GPS coordinates" /></label>
                 <label className="form-field"><span>Date photographed</span><input type="date" value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} /></label>
                 <label className="form-field"><span>Camera</span><input value={draft.camera} onChange={(event) => setDraft({ ...draft, camera: event.target.value })} placeholder="Camera body" /></label>
                 <label className="form-field"><span>Lens</span><input value={draft.lens} onChange={(event) => setDraft({ ...draft, lens: event.target.value })} placeholder="Lens and focal length" /></label>
@@ -211,7 +258,7 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
               </div>
               {actionError && <p className="form-error" role="alert">{actionError}</p>}
               {saveStatus && <p className={actionError ? 'form-error' : 'save-status'} role="status">{saveStatus}</p>}
-              <div className="form-actions"><button className="primary-button" type="submit" disabled={isSavingPhoto}>{editingPhoto ? <PencilLine size={17} /> : <Plus size={17} />}{isSavingPhoto ? 'Saving…' : editingPhoto ? 'Save changes' : 'Add to collection'}</button>{editingPhoto && <button className="cancel-button" type="button" onClick={cancelEditing} disabled={isSavingPhoto}>Cancel</button>}</div>
+              <div className="form-actions"><button className="primary-button" type="submit" disabled={isSavingPhoto || isReadingMetadata}>{editingPhoto ? <PencilLine size={17} /> : <Plus size={17} />}{isSavingPhoto ? 'Saving…' : isReadingMetadata ? 'Reading details…' : editingPhoto ? 'Save changes' : 'Add to collection'}</button>{editingPhoto && <button className="cancel-button" type="button" onClick={cancelEditing} disabled={isSavingPhoto || isReadingMetadata}>Cancel</button>}</div>
             </form>
             <section className="manage-list" aria-labelledby="collection-heading">
               <div className="form-heading"><div><span className="section-index">02</span><h2 id="collection-heading">In the collection</h2></div><span className="collection-count">{photos.length} PHOTOS</span></div>
