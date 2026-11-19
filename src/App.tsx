@@ -24,6 +24,11 @@ const initialPhotos: BirdPhoto[] = [
 }))
 
 const categories = ['All', 'Kenley Aerodrome', 'Farthing Downs', 'Warnham Local', 'Bough Beech', 'Sevenoaks Nature Reserve', 'Other']
+const monthNumbers = new Map([
+  ['january', 0], ['february', 1], ['march', 2], ['april', 3],
+  ['may', 4], ['june', 5], ['july', 6], ['august', 7],
+  ['september', 8], ['october', 9], ['november', 10], ['december', 11],
+])
 const blankDraft = {
   title: '',
   species: '',
@@ -34,6 +39,34 @@ const blankDraft = {
   settings: '1/500 f11 ISO 500',
   category: 'Kenley Aerodrome',
   notes: '',
+}
+
+function photoDateValue(date: string): number | null {
+  const isoDate = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date.trim())
+  if (isoDate) {
+    const [, year, month, day] = isoDate
+    const value = new Date(Number(year), Number(month) - 1, Number(day))
+    if (value.getFullYear() === Number(year) && value.getMonth() === Number(month) - 1 && value.getDate() === Number(day)) {
+      return value.getTime()
+    }
+    return null
+  }
+
+  const displayDate = /^(\d{1,2})\s+([a-z]+)\s+(\d{4})$/i.exec(date.trim())
+  if (displayDate) {
+    const [, day, month, year] = displayDate
+    const monthNumber = monthNumbers.get(month.toLowerCase())
+    if (monthNumber !== undefined) {
+      const value = new Date(Number(year), monthNumber, Number(day))
+      if (value.getFullYear() === Number(year) && value.getMonth() === monthNumber && value.getDate() === Number(day)) {
+        return value.getTime()
+      }
+    }
+    return null
+  }
+
+  const parsedDate = Date.parse(date)
+  return Number.isNaN(parsedDate) ? null : parsedDate
 }
 
 async function fetchPhotoCollection() {
@@ -93,7 +126,15 @@ function App({ backendConfigured }: { backendConfigured: boolean }) {
     if (selectedPhoto) window.scrollTo(0, 0)
   }, [selectedPhoto])
 
-  const visiblePhotos = activeCategory === 'All' ? photos : photos.filter((photo) => photo.category === activeCategory)
+  const visiblePhotos = photos
+    .filter((photo) => activeCategory === 'All' || photo.category === activeCategory)
+    .sort((first, second) => {
+      const firstDate = photoDateValue(first.date)
+      const secondDate = photoDateValue(second.date)
+      if (firstDate === null) return secondDate === null ? 0 : 1
+      if (secondDate === null) return -1
+      return secondDate - firstDate
+    })
 
   async function savePhoto(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
